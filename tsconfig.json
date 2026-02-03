@@ -27,6 +27,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
+    "src/**/*.ts",      // Add this line
+    "src/**/*.tsx",     // Add this line
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
