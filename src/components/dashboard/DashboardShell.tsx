@@ -1,39 +1,84 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation"; // Added useRouter
-import { BookOpen, LayoutDashboard, Settings, LogOut, Menu, Trophy } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation"; 
+import { BookOpen, LayoutDashboard, Settings, LogOut, Menu, Trophy, Sparkles, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from '@/lib/supabase';
 
 const menuItems = [
   { name: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
-  { name: 'Recite Quran', icon: BookOpen, href: '/dashboard/recite' }, // New Link
+  { name: 'Recite Quran', icon: BookOpen, href: '/dashboard/recite' }, 
   { name: 'Hifz Logs', icon: BookOpen, href: '/dashboard/logs' },
   { name: 'Leaderboard', icon: Trophy, href: '/dashboard/leaderboard' },
+  { name: 'Support Mission', icon: Heart, href: '/dashboard/donate' },
   { name: 'Achievements', icon: Trophy, href: '/dashboard/awards' },
   { name: 'Settings', icon: Settings, href: '/dashboard/settings' },
-];
 
+];
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter(); // Initialize router
+  const router = useRouter(); 
   const [isOpen, setIsOpen] = useState(false);
 
-  // Professional Logout Logic
+  // --- Ramadan Countdown Logic ---
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0 });
+  
+  useEffect(() => {
+    const target = new Date('2026-02-18T00:00:00').getTime();
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = target - now;
+      if (distance < 0) {
+        clearInterval(interval);
+        return;
+      }
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        mins: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const CountdownWidget = () => (
+    <div className="mt-auto px-2 py-4">
+      <div className="bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20 rounded-2xl p-4 backdrop-blur-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="h-4 w-4 text-emerald-400 animate-pulse" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Ramadan 2026</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <div className="text-center">
+            <p className="text-lg font-black text-white leading-none">{timeLeft.days}</p>
+            <p className="text-[9px] text-slate-500 uppercase font-bold">Days</p>
+          </div>
+          <div className="text-slate-700 font-bold">:</div>
+          <div className="text-center">
+            <p className="text-lg font-black text-white leading-none">{timeLeft.hours}</p>
+            <p className="text-[9px] text-slate-500 uppercase font-bold">Hrs</p>
+          </div>
+          <div className="text-slate-700 font-bold">:</div>
+          <div className="text-center">
+            <p className="text-lg font-black text-white leading-none">{timeLeft.mins}</p>
+            <p className="text-[9px] text-slate-500 uppercase font-bold">Mins</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("Logout error:", error.message);
     } else {
-      // 1. Close mobile menu if open
       setIsOpen(false);
-      // 2. Redirect to login
       router.push("/login");
-      // 3. Force refresh to clear server-side session cookies
       router.refresh();
     }
   };
@@ -68,11 +113,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             <NavLink key={item.name} item={item} />
           ))}
         </nav>
+
+        {/* Desktop Countdown */}
+        <CountdownWidget />
         
         <Button 
           variant="ghost" 
-          className="justify-start text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-          onClick={handleLogout} // Updated handler
+          className="justify-start text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all mt-4"
+          onClick={handleLogout}
         >
           <LogOut className="h-5 w-5 mr-3" />
           <span>Logout</span>
@@ -81,7 +129,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       {/* Mobile & Main Content */}
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 border-b border-emerald-500/20 bg-slate-900/50 backdrop-blur sticky top-0 z-50">
           <div className="flex items-center gap-2 font-bold text-emerald-400">
             <BookOpen className="h-5 w-5" />
@@ -94,7 +141,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="bg-slate-900 border-emerald-500/20 text-white p-0">
+            <SheetContent side="left" className="bg-slate-900 border-emerald-500/20 text-white p-0 flex flex-col">
               <div className="flex items-center justify-between p-6 border-b border-emerald-500/20">
                 <div className="flex items-center gap-2 font-bold text-emerald-400">
                   <BookOpen className="h-5 w-5" />
@@ -102,7 +149,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 </div>
               </div>
               
-              <nav className="space-y-2 p-6">
+              <nav className="flex-1 space-y-2 p-6">
                 {menuItems.map((item) => (
                   <Link 
                     key={item.name} 
@@ -119,12 +166,17 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                   </Link>
                 ))}
               </nav>
+
+              {/* Mobile Countdown */}
+              <div className="px-4 border-t border-emerald-500/10">
+                <CountdownWidget />
+              </div>
               
               <div className="p-6 border-t border-emerald-500/20">
                 <Button 
                   variant="ghost" 
                   className="w-full justify-start text-slate-400 hover:text-red-400 hover:bg-red-500/10"
-                  onClick={handleLogout} // Updated handler
+                  onClick={handleLogout}
                 >
                   <LogOut className="h-5 w-5 mr-3" />
                   Logout
@@ -134,7 +186,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </Sheet>
         </header>
 
-        {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-slate-950">
           <div className="max-w-7xl mx-auto">
             {children}

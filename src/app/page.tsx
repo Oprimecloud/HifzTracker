@@ -5,6 +5,8 @@ import Donate from "@/components/landing/Donate";
 import Footer from "@/components/landing/Footer";
 import HomeLeaderboard from "@/components/landing/HomeLeaderboard";
 
+
+
 export default function Home() {
   return (
     <main className="min-h-screen">

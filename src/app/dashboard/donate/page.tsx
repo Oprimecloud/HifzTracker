@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { Button } from "@/components/ui/button";
 import { Coffee, Heart, Server, ShieldCheck, Target, Loader2 } from "lucide-react";
 import PaystackPop from '@paystack/inline-js';
-
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import { redirect } from "next/navigation";
 
 export default function Donate({ userId }: { userId?: string }) {
   const [customAmount, setCustomAmount] = useState<string>("");
@@ -59,7 +60,8 @@ export default function Donate({ userId }: { userId?: string }) {
   };
 
   return (
-    <section id="donate" className="py-12 sm:py-16 md:py-24 bg-emerald-900 text-white overflow-hidden">
+    <DashboardShell>
+      <section id="donate" className="py-12 sm:py-16 md:py-24 bg-slate-900 text-white overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
           
@@ -94,7 +96,7 @@ export default function Donate({ userId }: { userId?: string }) {
             <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 opacity-20 blur" />
             <div className="relative bg-white p-6 sm:p-8 rounded-2xl shadow-xl text-slate-900">
               
-              <div className="mb-6 sm:mb-8 p-3 sm:p-4 bg-emerald-50/50 rounded-xl border border-emerald-100">
+              <div className="mb-6 sm:mb-8 p-3 sm:p-4 bg-slate-50/50 rounded-xl border border-emerald-100">
                 <div className="flex justify-between items-end mb-2 flex-wrap gap-2">
                   <div className="flex items-center gap-2 text-emerald-700">
                     <Target className="h-4 w-4" />
@@ -163,5 +165,6 @@ export default function Donate({ userId }: { userId?: string }) {
         </div>
       </div>
     </section>
+    </DashboardShell>
   );
 }
