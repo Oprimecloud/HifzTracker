@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Moon, MapPin, Loader2, Bell, BellOff } from "lucide-react";
+import { useState, useEffect, useRef } from 'react';
+import { Calendar as CalendarIcon, Moon, MapPin, Loader2, Bell, BellOff, Volume2 } from "lucide-react";
 import { Button } from '../ui/button';
 
 export default function IslamicCalendar() {
@@ -9,16 +9,30 @@ export default function IslamicCalendar() {
   const [locationName, setLocationName] = useState("Ibadan, NG");
   const [loading, setLoading] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  // State for the live countdown
   const [nextPrayer, setNextPrayer] = useState<{ name: string; countdown: string } | null>(null);
+  
+  // 🚀 Audio Reference
+  const adhanAudio = useRef<HTMLAudioElement | null>(null);
+  const lastNotifiedPrayer = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Standard audio initialization
+    adhanAudio.current = new Audio('https://www.islamcan.com/audio/adhan/azan1.mp3');
+  }, []);
 
   const enableNotifications = async () => {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
       setNotificationsEnabled(true);
+      // 🚀 Essential: Play/Pause briefly to unlock audio on mobile browsers
+      adhanAudio.current?.play().then(() => {
+        adhanAudio.current?.pause();
+        adhanAudio.current!.currentTime = 0;
+      }).catch(() => {});
     }
   };
 
+  // Fetch Timings Logic
   useEffect(() => {
     const fetchTimings = async (lat: number, lng: number, cityLabel?: string) => {
       try {
@@ -46,18 +60,30 @@ export default function IslamicCalendar() {
     }
   }, []);
 
-  // 1. Logic for Live Countdown
+  // MASTER EFFECT: Handle Countdown AND Audio Adhan Trigger
   useEffect(() => {
     if (!data) return;
 
-    const updateCountdown = () => {
+    const updateSync = () => {
       const now = new Date();
       const timings = data.timings;
       const prayerOrder = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+      const currentTimeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       
       let foundNext = false;
 
       for (let name of prayerOrder) {
+        // 1. Check if it's EXACTLY time for Adhan
+        if (notificationsEnabled && timings[name] === currentTimeStr && lastNotifiedPrayer.current !== name) {
+          lastNotifiedPrayer.current = name;
+          adhanAudio.current?.play().catch(e => console.warn("Audio blocked by browser", e));
+          new Notification(`Allahu Akbar! It is time for ${name}`, {
+            body: `Beginning prayer time for ${name} in ${locationName}.`,
+            icon: '/favicon.ico'
+          });
+        }
+
+        // 2. Update Countdown Logic
         const [hours, minutes] = timings[name].split(':');
         const prayerTime = new Date();
         prayerTime.setHours(parseInt(hours), parseInt(minutes), 0);
@@ -68,44 +94,20 @@ export default function IslamicCalendar() {
           const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
           const s = Math.floor((diff % (1000 * 60)) / 1000);
           
-          setNextPrayer({
-            name,
-            countdown: `${h}h ${m}m ${s}s`
-          });
+          setNextPrayer({ name, countdown: `${h}h ${m}m ${s}s` });
           foundNext = true;
           break;
         }
       }
 
-      if (!foundNext) {
-        setNextPrayer({ name: 'Fajr', countdown: 'Tomorrow' });
-      }
+      if (!foundNext) setNextPrayer({ name: 'Fajr', countdown: 'Tomorrow' });
+      
+      // Reset tracker at midnight
+      if (currentTimeStr === "00:00") lastNotifiedPrayer.current = null;
     };
 
-    const interval = setInterval(updateCountdown, 1000);
+    const interval = setInterval(updateSync, 1000); // 🚀 Check every second for precision
     return () => clearInterval(interval);
-  }, [data]);
-
-  // Background Checker for Notifications
-  useEffect(() => {
-    if (!data || !notificationsEnabled) return;
-
-    const checkPrayers = setInterval(() => {
-      const now = new Date();
-      const currentTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      
-      const prayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-      prayers.forEach(p => {
-        if (data.timings[p] === currentTime) {
-          new Notification(`Time for ${p}`, {
-            body: `It is now time for ${p} in ${locationName}.`,
-            icon: '/favicon.ico'
-          });
-        }
-      });
-    }, 60000);
-
-    return () => clearInterval(checkPrayers);
   }, [data, notificationsEnabled, locationName]);
 
   if (loading) return (
@@ -141,9 +143,9 @@ export default function IslamicCalendar() {
               : 'bg-white/5 border-white/5 text-slate-400'
             }`}
           >
-            {notificationsEnabled ? <Bell className="h-4 w-4 mr-2" /> : <BellOff className="h-4 w-4 mr-2" />}
+            {notificationsEnabled ? <Volume2 className="h-4 w-4 mr-2" /> : <BellOff className="h-4 w-4 mr-2" />}
             <span className="text-[10px] font-bold uppercase tracking-tight">
-              {notificationsEnabled ? 'Alerts On' : 'Enable Alerts'}
+              {notificationsEnabled ? 'Adhan Active' : 'Enable Adhan'}
             </span>
           </Button>
           
@@ -158,14 +160,15 @@ export default function IslamicCalendar() {
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].map((name) => (
-          <div key={name} className="bg-white/[0.03] border border-white/5 p-4 rounded-2xl flex flex-col items-center">
-            <span className="text-[9px] font-black text-slate-500 uppercase mb-1">{name}</span>
+          <div key={name} className={`border p-4 rounded-2xl flex flex-col items-center transition-all ${
+            nextPrayer?.name === name ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-white/[0.03] border-white/5'
+          }`}>
+            <span className={`text-[9px] font-black uppercase mb-1 ${nextPrayer?.name === name ? 'text-emerald-500' : 'text-slate-500'}`}>{name}</span>
             <span className="text-sm font-bold text-white">{data.timings[name]}</span>
           </div>
         ))}
       </div>
 
-      {/* 2. New Footer for Countdown & Status */}
       <div className="pt-4 border-t border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
