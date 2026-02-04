@@ -4,6 +4,8 @@ import "./globals.css";
 import { AudioProvider } from '@/context/AudioContext';
 import MiniPlayer from '@/components/dashboard/MiniPlayer';
 import InstallBanner from '@/components/ui/InstallBanner';
+import InstallPrompt from "@/components/InstallPrompt";
+
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -47,6 +49,7 @@ export default function RootLayout({
           {children}
           <MiniPlayer /> 
         </AudioProvider>
+        <InstallPrompt /> {/* 🚀 Add this line at the bottom */}
       </body>
     </html>
   );
