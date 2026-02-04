@@ -34,7 +34,7 @@ export default function IslamicCalendar() {
     const NotificationAPI = typeof window !== "undefined" ? (window as any)["Notification"] : null;
 
     if (!NotificationAPI) {
-      alert("Adhan alerts on iPhone require the app to be installed. Please use 'Add to Home Screen' first.");
+      alert("Adhan alerts on iPhone require the app to be installed. Please click the share icon & use 'Add to Home Screen' first.");
       return;
     }
 

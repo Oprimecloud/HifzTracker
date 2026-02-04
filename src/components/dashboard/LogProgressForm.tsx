@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { BookOpen, CheckCircle2 } from "lucide-react";
 
-export default function LogProgressForm({ userId }: { userId: string }) {
+export default function LogProgressForm({ userId }: { userId: string | null }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [surah, setSurah] = useState('');
@@ -20,23 +20,54 @@ export default function LogProgressForm({ userId }: { userId: string }) {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.from('progress_logs').insert([
-      {
-        user_id: userId,
-        surah_number: parseInt(surah),
-        ayah_start: parseInt(startAyah),
-        ayah_end: parseInt(endAyah),
-      },
-    ]);
+    const logEntry = {
+      surah_number: parseInt(surah),
+      ayah_start: parseInt(startAyah),
+      ayah_end: parseInt(endAyah),
+      created_at: new Date().toISOString(),
+    };
 
-    if (error) {
-      alert(error.message);
-    } else {
+    // 🚀 Logic for Guest User
+    if (userId === 'guest') {
+      const existingLogs = JSON.parse(localStorage.getItem('hifz_progress_logs') || '[]');
+      const updatedLogs = [logEntry, ...existingLogs];
+      
+      localStorage.setItem('hifz_progress_logs', JSON.stringify(updatedLogs));
+      
+      // Update the main guest profile stats
+      const profileData = JSON.parse(localStorage.getItem('hifz_tracker_data') || '{}');
+      const totalAyahs = (parseInt(endAyah) - parseInt(startAyah) + 1);
+      
+      localStorage.setItem('hifz_tracker_data', JSON.stringify({
+        ...profileData,
+        lastSurah: surah,
+        totalAyahs: (profileData.totalAyahs || 0) + totalAyahs,
+      }));
+
       setSurah(''); 
       setStartAyah(''); 
       setEndAyah('');
-      router.refresh();
-      alert('Progress logged! Eternity rewards updated.');
+      alert('Progress logged locally! Sign in later to sync with the cloud.');
+      window.location.reload(); // Refresh to update stats on page
+    } 
+    // 🚀 Logic for Logged-in User
+    else {
+      const { error } = await supabase.from('progress_logs').insert([
+        {
+          user_id: userId,
+          ...logEntry
+        },
+      ]);
+
+      if (error) {
+        alert(error.message);
+      } else {
+        setSurah(''); 
+        setStartAyah(''); 
+        setEndAyah('');
+        router.refresh();
+        alert('Progress logged! Eternity rewards updated.');
+      }
     }
     setLoading(false);
   };

@@ -1,9 +1,38 @@
+'use client';
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Sparkles, TrendingUp, ArrowRight } from "lucide-react";
 import RamadanCountdown from "../RamadanCountdown";
 
 export default function Hero() {
+  const router = useRouter();
+
+  // 🚀 Step 1 Logic: Initialize Guest Data & Redirect
+  const handleGetStarted = (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    // Check if user already has data
+    const existingData = localStorage.getItem('hifz_tracker_data');
+
+    if (!existingData) {
+      // Create guest profile to save database usage
+      const initialGuestData = {
+        isGuest: true,
+        lastSurah: 'Al-Fatiha',
+        totalAyahs: 0,
+        streak: 1,
+        joinedAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem('hifz_tracker_data', JSON.stringify(initialGuestData));
+    }
+
+    // Direct access without sign-in
+    router.push('/dashboard');
+  };
+
   return (
     <section className="relative overflow-hidden bg-[#020617] py-16 sm:py-24 lg:py-32">
       {/* 1. Enhanced Ambient Lighting */}
@@ -45,10 +74,10 @@ export default function Hero() {
           <div className="mt-10 flex flex-col sm:flex-row w-full sm:w-auto gap-4">
             <Button 
               size="lg" 
+              onClick={handleGetStarted}
               className="h-14 rounded-2xl bg-emerald-500 px-8 text-base font-bold text-slate-950 hover:bg-emerald-400 hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]" 
-              asChild
             >
-              <Link href="/login">Get Started for Free</Link>
+              Get Started for Free
             </Button>
             <Button 
               variant="outline" 

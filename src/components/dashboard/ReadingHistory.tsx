@@ -15,60 +15,88 @@ interface ReadingLog {
   created_at: string;
 }
 
-export default function ReadingHistory({ userId }: { userId: string }) {
+export default function ReadingHistory({ userId }: { userId: string | null }) {
   const [logs, setLogs] = useState<ReadingLog[]>([]);
 
+  // 🚀 Step 1: Hybrid Fetch Logic
   const fetchLogs = async () => {
-    const { data } = await supabase
-      .from('progress_logs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(10);
-    
-    if (data) setLogs(data);
+    if (userId === 'guest') {
+      // Fetch from browser memory
+      const localLogs = JSON.parse(localStorage.getItem('hifz_progress_logs') || '[]');
+      // Map local logs to match the interface (adding a temporary ID for the key)
+      const formattedLogs = localLogs.map((log: any, index: number) => ({
+        id: `local-${index}`,
+        ...log
+      }));
+      setLogs(formattedLogs.slice(0, 10));
+    } else if (userId) {
+      // Fetch from Supabase
+      const { data } = await supabase
+        .from('progress_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (data) setLogs(data);
+    }
   };
 
+  // 🚀 Step 2: Hybrid Delete Logic
   const handleDelete = async (logId: string) => {
     if (!confirm("Are you sure you want to remove this log? This will affect your streak stats.")) return;
 
-    const { error } = await supabase
-      .from('progress_logs')
-      .delete()
-      .eq('id', logId);
-
-    if (error) {
-      alert("Error deleting log: " + error.message);
+    if (userId === 'guest') {
+      // Delete from localStorage
+      const localLogs = JSON.parse(localStorage.getItem('hifz_progress_logs') || '[]');
+      // Since local IDs are generated on the fly, we find by index or created_at
+      const updatedLogs = localLogs.filter((_: any, index: number) => `local-${index}` !== logId);
+      localStorage.setItem('hifz_progress_logs', JSON.stringify(updatedLogs));
+      setLogs(updatedLogs.map((log: any, index: number) => ({ id: `local-${index}`, ...log })).slice(0, 10));
+      alert("Local log removed.");
     } else {
-      setLogs((prev) => prev.filter(log => log.id !== logId));
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('progress_logs')
+        .delete()
+        .eq('id', logId);
+
+      if (error) {
+        alert("Error deleting log: " + error.message);
+      } else {
+        setLogs((prev) => prev.filter(log => log.id !== logId));
+      }
     }
   };
 
   useEffect(() => {
     fetchLogs();
     
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'progress_logs', filter: `user_id=eq.${userId}` }, 
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setLogs((prev) => [payload.new as ReadingLog, ...prev].slice(0, 10));
-          } else if (payload.eventType === 'DELETE') {
-            setLogs((prev) => prev.filter(log => log.id !== payload.old.id));
+    // Only subscribe to DB changes if it's a real user
+    if (userId !== 'guest' && userId) {
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'progress_logs', filter: `user_id=eq.${userId}` }, 
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setLogs((prev) => [payload.new as ReadingLog, ...prev].slice(0, 10));
+            } else if (payload.eventType === 'DELETE') {
+              setLogs((prev) => prev.filter(log => log.id !== payload.old.id));
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+      return () => { supabase.removeChannel(channel); };
+    }
   }, [userId]);
 
   return (
     <Card className="border-white/5 bg-[#0a0a0a] shadow-lg rounded-lg">
       <CardHeader className="border-b border-white/5 bg-white/[0.02]">
         <CardTitle className="text-emerald-500 flex items-center gap-2 text-lg font-bold">
-          <History className="h-5 w-5" /> Recent Activity
+          <History className="h-5 w-5" /> {userId === 'guest' ? 'Recent Local Activity' : 'Recent Activity'}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">

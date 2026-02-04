@@ -1,26 +1,63 @@
-import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
+'use client';
+
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase'; // Using the client-side supabase instance
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import StatCards from "@/components/dashboard/StatCards";
 import LogProgressForm from "@/components/dashboard/LogProgressForm";
-import ReadingHistory from "@/components/dashboard/ReadingHistory";
 import ActivityHeatmap from "@/components/dashboard/ActivityHeatmap";
 import IslamicCalendar from "@/components/dashboard/IslamicCalendar";
+import { Loader2 } from "lucide-react";
 
+export default function DashboardPage() {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
-  
-  // 1. Get authenticated user
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  useEffect(() => {
+    async function loadDashboardData() {
+      // 1. Check for Authenticated User first
+      const { data: { user } } = await supabase.auth.getUser();
 
-  // 2. Fetch the user's brand-specific profile
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+      if (user) {
+        setUserId(user.id);
+        const { data: dbProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        setProfile({ ...dbProfile, isGuest: false });
+      } else {
+        // 2. Fallback to Guest Mode (Easy Access)
+        const localData = localStorage.getItem('hifz_tracker_data');
+        if (localData) {
+          const guestData = JSON.parse(localData);
+          setProfile({
+            full_name: 'Guest Brother/Sister',
+            current_streak: guestData.streak || 0,
+            isGuest: true
+          });
+          setUserId('guest'); // Temporary ID for components
+        } else {
+          // If no guest data and no login, you could redirect to login here
+          // but for "Easy Access" we'll let the StatCards handle the empty state
+          setProfile({ full_name: 'Brother/Sister', current_streak: 0, isGuest: true });
+        }
+      }
+      setLoading(false);
+    }
+
+    loadDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
 
   return (
     <DashboardShell>
@@ -28,54 +65,58 @@ export default async function DashboardPage() {
         
         {/* Header Section */}
         <header className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold text-white-900">
-            Assalamu Alaikum, <span className="text-white-900">{profile?.full_name || 'Brother/Sister'}</span>
+          <h1 className="text-3xl font-bold text-white">
+            Assalamu Alaikum, <span className="text-emerald-500">{profile?.full_name || 'Brother/Sister'}</span>
           </h1>
+          {profile?.isGuest && (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl w-fit">
+              <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">
+                Guest Mode • Data saved locally
+              </p>
+            </div>
+          )}
           <p className="text-slate-500">
             Track your journey. Your consistency today is your reward for eternity.
           </p>
         </header>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* 🌙 Main Calendar Section */}
-      <div className="lg:col-span-2 space-y-6">
-        <IslamicCalendar />
-        {/* Your current Hifz stats/charts go here */}
-      </div>
 
-      {/* 📊 Sidebar Widget (Stats or Donations) */}
-      <div className="space-y-6">
-        {/* Your Donation Progress Bar Widget */}
-      </div>
-    </div>
-       {/* 3. Quick Tips/Hadith Card (Maintains Brand Consistency) */}
-          <div className="bg-emerald-600 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-between">
-            <div>
-              <h3 className="text-xl font-bold mb-4">Did you know?</h3>
-              <p className="text-emerald-50 text-sm italic">
-                "The most beloved of deeds to Allah are those that are most consistent, even if they are small." 
-                (Bukhari)
-              </p>
-            </div>
-            <div className="mt-8 pt-6 border-t border-white-500/50">
-              <p className="text-xs text-emerald-100">
-                You are currently on a <span className="font-bold">{profile?.current_streak || 0} day</span> streak. 
-                Keep it going!
-              </p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <IslamicCalendar />
+          </div>
+          <div className="space-y-6">
+            {/* 3. Quick Tips/Hadith Card */}
+            <div className="bg-emerald-600 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-between h-full">
+              <div>
+                <h3 className="text-xl font-bold mb-4">Did you know?</h3>
+                <p className="text-emerald-50 text-sm italic leading-relaxed">
+                  "The most beloved of deeds to Allah are those that are most consistent, even if they are small." 
+                  (Bukhari)
+                </p>
+              </div>
+              <div className="mt-8 pt-6 border-t border-white/30">
+                <p className="text-xs text-emerald-100">
+                  You are currently on a <span className="font-bold">{profile?.current_streak || 0} day</span> streak. 
+                </p>
+              </div>
             </div>
           </div>
-        {/* 1. Stat Cards Section (The "Fintech" Logic with your Emerald Brand) */}
+        </div>
+
+        {/* 1. Stat Cards Section */}
         <StatCards profile={profile} />
-        {/* 2. Main Action Area: Logging Progress */}
+
+        {/* 2. Main Action Area */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <LogProgressForm userId={user.id} />
+            {/* If guest, we pass 'guest' so the form knows to save to localStorage instead of Supabase */}
+            <LogProgressForm userId={userId} />
           </div>
-          </div>
-               {/* PLACE HISTORY BELOW THE FORM */}
-        {/* 4. Placeholder for Heatmap/Wave Chart (Coming Next) */}
-      <div className="space-y-8">
-      <ActivityHeatmap userId={user.id} />
-      </div>
+        </div>
+
+        <div className="space-y-8">
+          <ActivityHeatmap userId={userId} />
+        </div>
       </div>
     </DashboardShell>
   );

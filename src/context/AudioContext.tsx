@@ -64,18 +64,26 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('ayah-ended-globally', handleGlobalNext);
   }, [playlist, reciter]);
 
-  const playAyah = (index: number, ayahs: Track[], reciterName: string) => {
-    if (!audioRef.current) return;
-    setPlaylist(ayahs);
-    setActiveAyahIndex(index);
-    setReciter(reciterName);
-    audioRef.current.pause();
-    audioRef.current.src = `https://cdn.islamic.network/quran/audio/128/${reciterName}/${ayahs[index].number}.mp3`;
-    audioRef.current.playbackRate = playbackRate;
-    audioRef.current.play().catch(() => {});
-    setIsPlaying(true);
-  };
-
+ // Inside your playAyah function in AudioProvider
+const playAyah = (index: number, ayahs: Track[], reciterName: string) => {
+  if (!audioRef.current) return;
+  setPlaylist(ayahs);
+  setActiveAyahIndex(index);
+  setReciter(reciterName);
+  
+  audioRef.current.pause();
+  const audioUrl = `https://cdn.islamic.network/quran/audio/64/${reciterName}/${ayahs[index].number}.mp3`;
+  
+  audioRef.current.src = audioUrl;
+  audioRef.current.load(); // Pre-load the file
+  audioRef.current.playbackRate = playbackRate;
+  
+  audioRef.current.play().catch((e) => {
+    console.warn("Audio failed to play. You might be offline.", e);
+  });
+  setIsPlaying(true);
+};
+  
   const toggleAudio = () => {
     if (!audioRef.current?.src) return;
     isPlaying ? audioRef.current.pause() : audioRef.current.play().catch(() => {});

@@ -8,9 +8,9 @@ import { Card } from "@/components/ui/card";
 import { Flame, Share2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toPng } from 'html-to-image';
-import AchievementPopup from './AchievementPopup'; // Import the new popup
+import AchievementPopup from './AchievementPopup';
 
-export default function ActivityHeatmap({ userId }: { userId: string }) {
+export default function ActivityHeatmap({ userId }: { userId: string | null }) {
   const [data, setData] = useState<{ date: string; count: number }[]>([]);
   const [showAchievement, setShowAchievement] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
@@ -20,7 +20,6 @@ export default function ActivityHeatmap({ userId }: { userId: string }) {
   const calculateStreak = (activityData: { date: string; count: number }[]) => {
     if (activityData.length === 0) return 0;
     
-    // Sort dates descending (newest first)
     const sortedDates = activityData
       .map(d => new Date(d.date).getTime())
       .sort((a, b) => b - a);
@@ -30,11 +29,9 @@ export default function ActivityHeatmap({ userId }: { userId: string }) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Start checking from the most recent activity
     let lastDate = new Date(sortedDates[0]);
     lastDate.setHours(0, 0, 0, 0);
 
-    // If latest activity is older than yesterday, streak is 0
     if (today.getTime() - lastDate.getTime() > oneDay) return 0;
 
     streak = 1;
@@ -48,7 +45,7 @@ export default function ActivityHeatmap({ userId }: { userId: string }) {
         streak++;
         lastDate = currentDate;
       } else if (diff > oneDay) {
-        break; // Gap found
+        break;
       }
     }
     return streak;
@@ -72,38 +69,50 @@ export default function ActivityHeatmap({ userId }: { userId: string }) {
 
   useEffect(() => {
     const fetchActivity = async () => {
-      const { data: hifzLogs } = await supabase
-        .from('progress_logs')
-        .select('created_at')
-        .eq('user_id', userId);
-
-      const { data: masjidLogs } = await supabase
-        .from('masjid_logs')
-        .select('created_at')
-        .eq('user_id', userId);
-
       const counts: Record<string, number> = {};
 
-      hifzLogs?.forEach((log) => {
-        const date = new Date(log.created_at).toISOString().split('T')[0];
-        counts[date] = (counts[date] || 0) + 2; 
-      });
+      // 🚀 Logic for Guest User (Local-First)
+      if (userId === 'guest') {
+        const localLogs = JSON.parse(localStorage.getItem('hifz_progress_logs') || '[]');
+        
+        localLogs.forEach((log: any) => {
+          const date = new Date(log.created_at).toISOString().split('T')[0];
+          counts[date] = (counts[date] || 0) + 2; 
+        });
+      } 
+      // 🚀 Logic for Registered User (Supabase)
+      else if (userId) {
+        const { data: hifzLogs } = await supabase
+          .from('progress_logs')
+          .select('created_at')
+          .eq('user_id', userId);
 
-      masjidLogs?.forEach((log) => {
-        const date = new Date(log.created_at).toISOString().split('T')[0];
-        counts[date] = (counts[date] || 0) + 1; 
-      });
+        const { data: masjidLogs } = await supabase
+          .from('masjid_logs')
+          .select('created_at')
+          .eq('user_id', userId);
+
+        hifzLogs?.forEach((log) => {
+          const date = new Date(log.created_at).toISOString().split('T')[0];
+          counts[date] = (counts[date] || 0) + 2; 
+        });
+
+        masjidLogs?.forEach((log) => {
+          const date = new Date(log.created_at).toISOString().split('T')[0];
+          counts[date] = (counts[date] || 0) + 1; 
+        });
+      }
 
       const formattedData = Object.keys(counts).map(date => ({ date, count: counts[date] }));
       setData(formattedData);
 
-      // Check for streak milestone
       const streak = calculateStreak(formattedData);
       setCurrentStreak(streak);
       if (streak === 7) {
         setShowAchievement(true);
       }
     };
+    
     fetchActivity();
   }, [userId]);
 
@@ -185,7 +194,6 @@ export default function ActivityHeatmap({ userId }: { userId: string }) {
         `}</style>
       </Card>
 
-      {/* Achievement Popup Integration */}
       <AchievementPopup 
         isOpen={showAchievement} 
         onClose={() => setShowAchievement(false)} 

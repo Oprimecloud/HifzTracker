@@ -48,6 +48,38 @@ export default function QuranReader({ userId }: { userId: string }) {
     }
   }, [activeAyahIndex, isPlaying, selectedSurah, playlist]);
 
+  // Inside your QuranReader Component...
+useEffect(() => {
+  const cacheKey = `surah_${selectedSurah}`;
+  const cachedData = localStorage.getItem(cacheKey);
+
+  setLoading(true);
+
+  // 🚀 Logic: Try to fetch fresh data, but fallback to cache if offline
+  fetch(`https://api.alquran.cloud/v1/surah/${selectedSurah}/editions/quran-uthmani,en.sahih`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.data?.[0]) {
+        const verses = data.data[0].ayahs.map((v: any, i: number) => ({ 
+          ...v, 
+          translation: data.data[1].ayahs[i].text, 
+          surah: selectedSurah 
+        }));
+        setAyahs(verses);
+        localStorage.setItem(cacheKey, JSON.stringify(verses)); // Save for offline use
+      }
+      setLoading(false);
+    })
+    .catch(() => {
+      // 🚀 Offline fallback
+      if (cachedData) {
+        setAyahs(JSON.parse(cachedData));
+        console.log("Loaded Surah from offline cache");
+      }
+      setLoading(false);
+    });
+}, [selectedSurah]);
+
   return (
     <Card className="bg-[#0a0a0a] border-white/5 overflow-hidden flex flex-col h-[75vh] md:h-[85vh]">
       <div className="p-4 md:p-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02] sticky top-0 z-20">
