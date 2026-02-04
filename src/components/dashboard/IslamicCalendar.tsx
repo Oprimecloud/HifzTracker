@@ -8,45 +8,54 @@ export default function IslamicCalendar() {
   const [data, setData] = useState<any>(null);
   const [locationName, setLocationName] = useState("Ibadan, NG");
   const [loading, setLoading] = useState(true);
-  
-  // 🚀 Logic: Initialize state from localStorage to prevent reset on refresh
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  
   const [nextPrayer, setNextPrayer] = useState<{ name: string; countdown: string } | null>(null);
   
   const adhanAudio = useRef<HTMLAudioElement | null>(null);
   const lastNotifiedPrayer = useRef<string | null>(null);
 
-  // 1. Load saved preference on mount
+  // 1. Load saved preference & Register Service Worker
   useEffect(() => {
     const saved = localStorage.getItem('adhan_enabled');
     if (saved === 'true') setNotificationsEnabled(true);
     
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        console.log('Service Worker Registered');
+      });
+    }
+
     adhanAudio.current = new Audio('https://www.islamcan.com/audio/adhan/azan1.mp3');
   }, []);
 
-  // 2. Persistent Enable Logic
   const enableNotifications = async () => {
-    const permission = await Notification.requestPermission();
-    if (permission === "granted") {
-      const nextState = !notificationsEnabled;
-      setNotificationsEnabled(nextState);
-      
-      // 🚀 Save to long-term storage
-      localStorage.setItem('adhan_enabled', nextState.toString());
+    const hasNotificationSupport = typeof window !== 'undefined' && 'Notification' in window;
+    
+    if (!hasNotificationSupport) {
+      alert("Please ensure you have opened this app from your Home Screen, not inside Safari.");
+      return;
+    }
 
-      if (nextState) {
-        // Unlock browser audio context for background play
-        adhanAudio.current?.play().then(() => {
-          adhanAudio.current?.pause();
-          adhanAudio.current!.currentTime = 0;
-        }).catch(() => {});
-      } else {
-        adhanAudio.current?.pause();
+    // 🚀 Debug: Check current status
+    console.log("Current Permission:", Notification.permission);
+
+    if (Notification.permission === "denied") {
+      alert("iOS has blocked notifications. You must delete the app from your Home Screen and re-add it to reset permissions.");
+      return;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        setNotificationsEnabled(true);
+        localStorage.setItem('adhan_enabled', 'true');
+        // ... rest of your audio logic
       }
+    } catch (error) {
+      alert("System error requesting permission. Please check if you are using HTTPS.");
     }
   };
-
+  
   useEffect(() => {
     const fetchTimings = async (lat: number, lng: number, cityLabel?: string) => {
       try {
@@ -88,11 +97,25 @@ export default function IslamicCalendar() {
       for (let name of prayerOrder) {
         if (notificationsEnabled && timings[name] === currentTimeStr && lastNotifiedPrayer.current !== name) {
           lastNotifiedPrayer.current = name;
+          
           adhanAudio.current?.play().catch(e => console.warn("Audio blocked", e));
-          new Notification(`Time for ${name}`, {
-            body: `Beginning prayer in ${locationName}.`,
-            icon: '/favicon.ico'
-          });
+
+          // 🚀 Background Service Worker Notification
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'PLAY_ADHAN',
+              prayerName: name,
+              location: locationName
+            });
+          }
+          
+          // 🚀 Foreground Notification (Only if supported)
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(`Time for ${name}`, {
+              body: `Beginning prayer in ${locationName}.`,
+              icon: '/favicon.ico'
+            });
+          }
         }
 
         const [hours, minutes] = timings[name].split(':');
@@ -152,7 +175,7 @@ export default function IslamicCalendar() {
             }`}
           >
             {notificationsEnabled ? <Volume2 className="h-4 w-4 mr-2" /> : <BellOff className="h-4 w-4 mr-2" />}
-            <span className="text-[10px] font-bold uppercase tracking-tight">
+            <span className="text-[10px] font-bold uppercase tracking-tight text-white">
               {notificationsEnabled ? 'Adhan Active' : 'Enable Adhan'}
             </span>
           </Button>

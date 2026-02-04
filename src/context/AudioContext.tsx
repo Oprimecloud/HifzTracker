@@ -70,7 +70,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     setActiveAyahIndex(index);
     setReciter(reciterName);
     audioRef.current.pause();
-    audioRef.current.src = `https://cdn.islamic.network/quran/audio/64/${reciterName}/${ayahs[index].number}.mp3`;
+    audioRef.current.src = `https://cdn.islamic.network/quran/audio/128/${reciterName}/${ayahs[index].number}.mp3`;
     audioRef.current.playbackRate = playbackRate;
     audioRef.current.play().catch(() => {});
     setIsPlaying(true);
