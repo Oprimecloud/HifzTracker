@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AudioProvider } from '@/context/AudioContext';
+import MiniPlayer from '@/components/dashboard/MiniPlayer';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,8 +19,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
+        <AudioProvider>
         {children}
-        
+        <MiniPlayer /> 
+        </AudioProvider>
       </body>
     </html>
   );
