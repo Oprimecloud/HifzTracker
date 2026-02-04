@@ -2,11 +2,18 @@
 
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 
+interface Track {
+  surah: number;
+  ayah: number;
+  number: number;
+}
+
 interface AudioContextType {
   isPlaying: boolean;
-  currentTrack: { surah?: number; ayah?: number; reciter?: string } | null;
+  activeAyahIndex: number;
+  playlist: Track[];
   toggleAudio: () => void;
-  playAyah: (ayahNumber: number, reciter: string, surahNumber?: number) => void;
+  playAyah: (index: number, ayahs: Track[], reciter: string) => void;
   playbackRate: number;
   setRate: (rate: number) => void;
   isLooping: boolean;
@@ -17,75 +24,77 @@ const AudioContext = createContext<AudioContextType | null>(null);
 
 export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState<{ surah?: number; ayah?: number; reciter?: string } | null>(null);
+  const [playlist, setPlaylist] = useState<Track[]>([]);
+  const [activeAyahIndex, setActiveAyahIndex] = useState(0);
+  const [reciter, setReciter] = useState('ar.alafasy');
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLooping, setIsLooping] = useState(false);
-  
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-    }
-
+    audioRef.current = new Audio();
     const handleEnded = () => {
       if (isLooping) {
         audioRef.current!.currentTime = 0;
         audioRef.current!.play().catch(() => {});
       } else {
-        // 🚀 Signals the QuranReader to move to the next Ayah
-        window.dispatchEvent(new CustomEvent('ayah-ended'));
+        window.dispatchEvent(new CustomEvent('ayah-ended-globally'));
       }
     };
-
-    const currentAudio = audioRef.current;
-    currentAudio.addEventListener('ended', handleEnded);
-    return () => currentAudio.removeEventListener('ended', handleEnded);
+    audioRef.current.addEventListener('ended', handleEnded);
+    return () => audioRef.current?.removeEventListener('ended', handleEnded);
   }, [isLooping]);
 
-  const playAyah = (ayahNumber: number, reciter: string, surahNumber?: number) => {
+  useEffect(() => {
+    const handleGlobalNext = () => {
+      setActiveAyahIndex((prev) => {
+        if (prev < playlist.length - 1) {
+          const nextIndex = prev + 1;
+          if (audioRef.current) {
+            audioRef.current.src = `https://cdn.islamic.network/quran/audio/64/${reciter}/${playlist[nextIndex].number}.mp3`;
+            audioRef.current.play().catch(() => {});
+          }
+          return nextIndex;
+        }
+        setIsPlaying(false);
+        return prev;
+      });
+    };
+    window.addEventListener('ayah-ended-globally', handleGlobalNext);
+    return () => window.removeEventListener('ayah-ended-globally', handleGlobalNext);
+  }, [playlist, reciter]);
+
+  const playAyah = (index: number, ayahs: Track[], reciterName: string) => {
     if (!audioRef.current) return;
-    
-    const url = `https://cdn.islamic.network/quran/audio/64/${reciter}/${ayahNumber}.mp3`;
-    
-    // Fix for AbortError: Pause and clear before new load
-    if (audioRef.current.src !== url) {
-      audioRef.current.pause();
-      audioRef.current.src = url;
-      audioRef.current.load();
-      setCurrentTrack({ surah: surahNumber, ayah: ayahNumber, reciter });
-    }
-    
+    setPlaylist(ayahs);
+    setActiveAyahIndex(index);
+    setReciter(reciterName);
+    audioRef.current.pause();
+    audioRef.current.src = `https://cdn.islamic.network/quran/audio/64/${reciterName}/${ayahs[index].number}.mp3`;
     audioRef.current.playbackRate = playbackRate;
-    audioRef.current.play().catch((err) => {
-      console.warn("Playback handled:", err.message);
-    }); 
+    audioRef.current.play().catch(() => {});
     setIsPlaying(true);
   };
 
   const toggleAudio = () => {
-    if (!audioRef.current || !audioRef.current.src) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(() => {});
-    }
+    if (!audioRef.current?.src) return;
+    isPlaying ? audioRef.current.pause() : audioRef.current.play().catch(() => {});
     setIsPlaying(!isPlaying);
-  };
-
-  const setRate = (rate: number) => {
-    setPlaybackRate(rate);
-    if (audioRef.current) audioRef.current.playbackRate = rate;
   };
 
   return (
     <AudioContext.Provider value={{ 
-      isPlaying, currentTrack, toggleAudio, playAyah, 
-      playbackRate, setRate, isLooping, setLooping: setIsLooping 
+      isPlaying, activeAyahIndex, playlist, toggleAudio, playAyah, 
+      playbackRate, setRate: (r) => { setPlaybackRate(r); if(audioRef.current) audioRef.current.playbackRate = r; }, 
+      isLooping, setLooping: setIsLooping 
     }}>
       {children}
     </AudioContext.Provider>
   );
 }
 
-export const useAudio = () => useContext(AudioContext)!;
+export const useAudio = () => {
+  const context = useContext(AudioContext);
+  if (!context) throw new Error("useAudio must be used within AudioProvider");
+  return context;
+};
