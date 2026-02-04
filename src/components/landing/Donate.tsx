@@ -35,7 +35,7 @@ export default function Donate({ userId }: { userId?: string }) {
 
     const paystack = new PaystackPop();
     paystack.newTransaction({
-      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '', // Ensure key is string
+      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC || '', // Ensure key is string
       email: 'support@optimistcx.space',
       amount: amount * 100,
       currency: 'NGN',
