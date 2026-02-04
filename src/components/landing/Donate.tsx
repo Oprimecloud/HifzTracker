@@ -4,14 +4,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from "@/components/ui/button";
 import { Coffee, Heart, Server, ShieldCheck, Target, Loader2 } from "lucide-react";
-import PaystackPop from '@paystack/inline-js';
-
 
 export default function Donate({ userId }: { userId?: string }) {
   const [customAmount, setCustomAmount] = useState<string>("");
   const [currentRaised, setCurrentRaised] = useState<number>(0);
   const [fetching, setFetching] = useState(true);
-
 
   const monthlyGoal = 50000;
 
@@ -27,35 +24,43 @@ export default function Donate({ userId }: { userId?: string }) {
 
   const progressPercentage = Math.min((currentRaised / monthlyGoal) * 100, 100);
 
-  const handlePaystack = (amount: number) => {
+  const handlePaystack = async (amount: number) => {
     if (!amount || amount <= 0) {
       alert("Please enter a valid amount to continue.");
       return;
     }
 
-    const paystack = new PaystackPop();
-    paystack.newTransaction({
-      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC || '', // Ensure key is string
-      email: 'support@optimistcx.space',
-      amount: amount * 100,
-      currency: 'NGN',
-      onSuccess: async (transaction: any) => {
-        // Log successful donation to Supabase using the 'transaction' object
-        const { error } = await supabase.from('donations').insert([{
-          amount: amount,
-          reference: transaction.reference, // Fixed: use transaction.reference
-          user_id: userId || null
-        }]);
+    try {
+      // 🚀 THE BULLETPROOF FIX: Dynamic import inside the function
+      // This prevents Vercel from seeing the 'window' dependency during build
+      const PaystackPop = (await import('@paystack/inline-js')).default;
+      const paystack = new PaystackPop();
+      
+      paystack.newTransaction({
+        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC || '', 
+        email: 'support@optimistcx.space',
+        amount: amount * 100,
+        currency: 'NGN',
+        onSuccess: async (transaction: any) => {
+          const { error } = await supabase.from('donations').insert([{
+            amount: amount,
+            reference: transaction.reference,
+            user_id: userId || null
+          }]);
 
-        if (!error) {
-          setCurrentRaised(prev => prev + amount);
-          alert('Jazakumullahu Khayran! Your donation has been recorded.');
-        } else {
-          console.error("Supabase Error:", error.message);
-        }
-      },
-      onCancel: () => console.log('Window closed') // Library uses onCancel, not onClose
-    });
+          if (!error) {
+            setCurrentRaised(prev => prev + amount);
+            alert('Jazakumullahu Khayran! Your donation has been recorded.');
+          } else {
+            console.error("Supabase Error:", error.message);
+          }
+        },
+        onCancel: () => console.log('Window closed') 
+      });
+    } catch (error) {
+      console.error("Paystack initialization failed:", error);
+      alert("Could not load the payment gateway. Please check your internet connection.");
+    }
   };
 
   return (
