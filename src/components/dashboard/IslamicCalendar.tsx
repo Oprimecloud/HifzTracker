@@ -1,38 +1,59 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Calendar as CalendarIcon, Moon, MapPin, Loader2, Bell, BellOff, Volume2 } from "lucide-react";
+import { Calendar as CalendarIcon, Moon, MapPin, Loader2, BellOff, Volume2 } from "lucide-react";
 import { Button } from '../ui/button';
 
 export default function IslamicCalendar() {
   const [data, setData] = useState<any>(null);
   const [locationName, setLocationName] = useState("Ibadan, NG");
   const [loading, setLoading] = useState(true);
+  
+  // 🚀 Logic: Initialize state from localStorage to prevent reset on refresh
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  
   const [nextPrayer, setNextPrayer] = useState<{ name: string; countdown: string } | null>(null);
   
-  // 🚀 Audio Reference
   const adhanAudio = useRef<HTMLAudioElement | null>(null);
   const lastNotifiedPrayer = useRef<string | null>(null);
 
+  // 1. Load saved preference & Register Service Worker
   useEffect(() => {
-    // Standard audio initialization
+    const saved = localStorage.getItem('adhan_enabled');
+    if (saved === 'true') setNotificationsEnabled(true);
+    
+    // Register the background Service Worker for Option B
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        console.log('Service Worker Registered for HifzTracker', reg.scope);
+      });
+    }
+
     adhanAudio.current = new Audio('https://www.islamcan.com/audio/adhan/azan1.mp3');
   }, []);
 
+  // 2. Persistent Enable Logic with Audio "Unlocking"
   const enableNotifications = async () => {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
-      setNotificationsEnabled(true);
-      // 🚀 Essential: Play/Pause briefly to unlock audio on mobile browsers
-      adhanAudio.current?.play().then(() => {
+      const nextState = !notificationsEnabled;
+      setNotificationsEnabled(nextState);
+      
+      // 🚀 Save to long-term storage
+      localStorage.setItem('adhan_enabled', nextState.toString());
+
+      if (nextState) {
+        // Unlock browser audio context for background play
+        adhanAudio.current?.play().then(() => {
+          adhanAudio.current?.pause();
+          adhanAudio.current!.currentTime = 0;
+        }).catch(() => {});
+      } else {
         adhanAudio.current?.pause();
-        adhanAudio.current!.currentTime = 0;
-      }).catch(() => {});
+      }
     }
   };
 
-  // Fetch Timings Logic
   useEffect(() => {
     const fetchTimings = async (lat: number, lng: number, cityLabel?: string) => {
       try {
@@ -60,7 +81,6 @@ export default function IslamicCalendar() {
     }
   }, []);
 
-  // MASTER EFFECT: Handle Countdown AND Audio Adhan Trigger
   useEffect(() => {
     if (!data) return;
 
@@ -73,17 +93,29 @@ export default function IslamicCalendar() {
       let foundNext = false;
 
       for (let name of prayerOrder) {
-        // 1. Check if it's EXACTLY time for Adhan
+        // Check if it's EXACTLY time for Adhan
         if (notificationsEnabled && timings[name] === currentTimeStr && lastNotifiedPrayer.current !== name) {
           lastNotifiedPrayer.current = name;
-          adhanAudio.current?.play().catch(e => console.warn("Audio blocked by browser", e));
+          
+          // 🚀 Play local audio
+          adhanAudio.current?.play().catch(e => console.warn("Audio blocked", e));
+
+          // 🚀 Send Message to Service Worker for Background Notification
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'PLAY_ADHAN',
+              prayerName: name,
+              location: locationName
+            });
+          }
+          
+          // Fallback browser notification
           new Notification(`Allahu Akbar! It is time for ${name}`, {
-            body: `Beginning prayer time for ${name} in ${locationName}.`,
+            body: `Beginning prayer in ${locationName}.`,
             icon: '/favicon.ico'
           });
         }
 
-        // 2. Update Countdown Logic
         const [hours, minutes] = timings[name].split(':');
         const prayerTime = new Date();
         prayerTime.setHours(parseInt(hours), parseInt(minutes), 0);
@@ -101,8 +133,6 @@ export default function IslamicCalendar() {
       }
 
       if (!foundNext) setNextPrayer({ name: 'Fajr', countdown: 'Tomorrow' });
-      
-      // Reset tracker at midnight
       if (currentTimeStr === "00:00") lastNotifiedPrayer.current = null;
     };
 
@@ -118,7 +148,6 @@ export default function IslamicCalendar() {
 
   return (
     <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-emerald-500/10 p-5 sm:p-8 rounded-3xl shadow-xl space-y-6">
-      
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-emerald-500/10 rounded-2xl">
@@ -144,7 +173,7 @@ export default function IslamicCalendar() {
             }`}
           >
             {notificationsEnabled ? <Volume2 className="h-4 w-4 mr-2" /> : <BellOff className="h-4 w-4 mr-2" />}
-            <span className="text-[10px] font-bold uppercase tracking-tight">
+            <span className="text-[10px] font-bold uppercase tracking-tight text-white">
               {notificationsEnabled ? 'Adhan Active' : 'Enable Adhan'}
             </span>
           </Button>
@@ -172,7 +201,7 @@ export default function IslamicCalendar() {
       <div className="pt-4 border-t border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest text-white">
             {nextPrayer ? `${nextPrayer.name} in ${nextPrayer.countdown}` : 'Calculating next prayer...'}
           </span>
         </div>
