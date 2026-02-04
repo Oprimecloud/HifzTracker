@@ -17,22 +17,15 @@ export default function IslamicCalendar() {
   const adhanAudio = useRef<HTMLAudioElement | null>(null);
   const lastNotifiedPrayer = useRef<string | null>(null);
 
-  // 1. Load saved preference & Register Service Worker
+  // 1. Load saved preference on mount
   useEffect(() => {
     const saved = localStorage.getItem('adhan_enabled');
     if (saved === 'true') setNotificationsEnabled(true);
     
-    // Register the background Service Worker for Option B
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then((reg) => {
-        console.log('Service Worker Registered for HifzTracker', reg.scope);
-      });
-    }
-
     adhanAudio.current = new Audio('https://www.islamcan.com/audio/adhan/azan1.mp3');
   }, []);
 
-  // 2. Persistent Enable Logic with Audio "Unlocking"
+  // 2. Persistent Enable Logic
   const enableNotifications = async () => {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
@@ -93,24 +86,10 @@ export default function IslamicCalendar() {
       let foundNext = false;
 
       for (let name of prayerOrder) {
-        // Check if it's EXACTLY time for Adhan
         if (notificationsEnabled && timings[name] === currentTimeStr && lastNotifiedPrayer.current !== name) {
           lastNotifiedPrayer.current = name;
-          
-          // 🚀 Play local audio
           adhanAudio.current?.play().catch(e => console.warn("Audio blocked", e));
-
-          // 🚀 Send Message to Service Worker for Background Notification
-          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({
-              type: 'PLAY_ADHAN',
-              prayerName: name,
-              location: locationName
-            });
-          }
-          
-          // Fallback browser notification
-          new Notification(`Allahu Akbar! It is time for ${name}`, {
+          new Notification(`Time for ${name}`, {
             body: `Beginning prayer in ${locationName}.`,
             icon: '/favicon.ico'
           });
@@ -136,7 +115,7 @@ export default function IslamicCalendar() {
       if (currentTimeStr === "00:00") lastNotifiedPrayer.current = null;
     };
 
-    const interval = setInterval(updateSync, 1000); // 🚀 Check every second for precision
+    const interval = setInterval(updateSync, 1000);
     return () => clearInterval(interval);
   }, [data, notificationsEnabled, locationName]);
 
@@ -173,7 +152,7 @@ export default function IslamicCalendar() {
             }`}
           >
             {notificationsEnabled ? <Volume2 className="h-4 w-4 mr-2" /> : <BellOff className="h-4 w-4 mr-2" />}
-            <span className="text-[10px] font-bold uppercase tracking-tight text-white">
+            <span className="text-[10px] font-bold uppercase tracking-tight">
               {notificationsEnabled ? 'Adhan Active' : 'Enable Adhan'}
             </span>
           </Button>
