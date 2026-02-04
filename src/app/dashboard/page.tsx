@@ -7,6 +7,7 @@ import StatCards from "@/components/dashboard/StatCards";
 import LogProgressForm from "@/components/dashboard/LogProgressForm";
 import ActivityHeatmap from "@/components/dashboard/ActivityHeatmap";
 import IslamicCalendar from "@/components/dashboard/IslamicCalendar";
+import SmartRevision from "@/components/dashboard/SmartRevision";
 import { Loader2 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -79,6 +80,11 @@ export default function DashboardPage() {
             Track your journey. Your consistency today is your reward for eternity.
           </p>
         </header>
+        
+         <SmartRevision userId={userId} />
+
+        {/* 1. Stat Cards Section */}
+        <StatCards profile={profile} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
@@ -102,9 +108,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-
-        {/* 1. Stat Cards Section */}
-        <StatCards profile={profile} />
+       
 
         {/* 2. Main Action Area */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -116,6 +120,8 @@ export default function DashboardPage() {
 
         <div className="space-y-8">
           <ActivityHeatmap userId={userId} />
+          {/* 🚀 The New Smart Revision Card */}
+          
         </div>
       </div>
     </DashboardShell>
