@@ -67,7 +67,7 @@ export default function DonateContent({ userId }: { userId?: string }) {
               <span className="text-emerald-400">Continuous Charity</span>
             </h2>
             <p className="mt-4 sm:mt-6 text-base sm:text-lg leading-7 sm:leading-8 text-emerald-100/80">
-              HifzTracker is a Sadaqah Jariyah project. We don't show ads or sell your data. 
+              HifzTracker is a Sadaqah Jariyah project, not for profit. We don't show ads or sell your data. 
               Your donations help us cover server costs, database maintenance, and future 
               features for thousands of Muslims worldwide.
             </p>
