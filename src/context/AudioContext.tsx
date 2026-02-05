@@ -42,7 +42,7 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
     if (!audioRef.current) return;
 
     const ayah = ayahs[index];
-    const audioUrl = `https://cdn.islamic.network/quran/audio/128/${reciter}/${ayah.number}.mp3`;
+    const audioUrl = `https://cdn.islamic.network/quran/audio/64/${reciter}/${ayah.number}.mp3`;
 
     // 🚀 Force iOS to recognize a new source load
     audioRef.current.pause();
