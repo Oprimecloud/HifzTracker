@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import { toast } from "sonner"; // Assuming you use Sonner for alerts
 
 interface AudioContextType {
   isPlaying: boolean;
@@ -25,15 +26,16 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize Audio Element once
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      audioRef.current = new Audio();
-      audioRef.current.preload = "auto";
+      const audio = new Audio();
+      audio.preload = "auto";
+      // 🚀 iOS Hack: Important for PWAs to play in the background/lockscreen
+      audio.setAttribute('playsinline', 'true'); 
+      audioRef.current = audio;
     }
   }, []);
 
-  // Update playback rate whenever it changes
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = playbackRate;
   }, [playbackRate]);
@@ -41,28 +43,42 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
   const playAyah = async (index: number, ayahs: any[], reciter: string) => {
     if (!audioRef.current) return;
 
+    // 🚀 STEP 1: iOS PWA Prime
+    // We play a tiny silent base64 beep to "claim" the audio hardware immediately
+    audioRef.current.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+    try {
+      await audioRef.current.play();
+    } catch (e) {
+      console.warn("Hardware priming failed, but continuing...");
+    }
+
     const ayah = ayahs[index];
     const audioUrl = `https://cdn.islamic.network/quran/audio/64/${reciter}/${ayah.number}.mp3`;
 
-    // 🚀 Force iOS to recognize a new source load
-    audioRef.current.pause();
-    audioRef.current.src = audioUrl;
-    audioRef.current.load();
-    
-    setActiveAyahIndex(index);
-    setPlaylist(ayahs);
+    // 🚀 STEP 2: Transition to real content
+    setTimeout(async () => {
+      if (!audioRef.current) return;
+      audioRef.current.pause();
+      audioRef.current.src = audioUrl;
+      audioRef.current.load();
+      
+      setActiveAyahIndex(index);
+      setPlaylist(ayahs);
 
-    try {
-      await audioRef.current.play(); // 🚀 Await is required for iOS
-      setIsPlaying(true);
-    } catch (err) {
-      console.error("Playback failed, retrying...", err);
-      // Fallback: iOS sometimes requires a direct play call after a user gesture
-      audioRef.current.play();
-      setIsPlaying(true);
-    }
+      try {
+        await audioRef.current.play();
+        setIsPlaying(true);
+      } catch (err: any) {
+        setIsPlaying(false);
+        // 🚀 Error Detection for iOS
+        if (err.name === 'NotAllowedError') {
+          toast.error("iOS Blocked Audio. Please ensure your physical Mute switch is OFF and try again.");
+        } else {
+          toast.error(`Playback Error: ${err.message}`);
+        }
+      }
+    }, 10); // Minimal delay
 
-    // Handle Auto-Play next Ayah
     audioRef.current.onended = () => {
       if (isLooping) {
         audioRef.current?.play();
@@ -81,7 +97,9 @@ export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play();
+      audioRef.current.play().catch(err => {
+        toast.error("Could not resume audio. Tap a specific verse to restart.");
+      });
       setIsPlaying(true);
     }
   };

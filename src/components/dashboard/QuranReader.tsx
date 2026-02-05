@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Loader2, Play, Pause, Languages, Repeat, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAudio } from '@/context/AudioContext';
+import { toast } from "sonner";
 
 export default function QuranReader({ userId }: { userId: string }) {
   const { isPlaying, toggleAudio, playAyah, activeAyahIndex, playlist, playbackRate, setRate, isLooping, setLooping } = useAudio();
@@ -19,6 +20,7 @@ export default function QuranReader({ userId }: { userId: string }) {
 
   // 🚀 iOS PWA UNLOCK: Synchronous hardware wake-up
   const handleMasterPlay = async (index?: number) => {
+    // Immediate feedback for PWA
     try {
       const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (AudioContextClass) {
@@ -26,7 +28,7 @@ export default function QuranReader({ userId }: { userId: string }) {
         if (tempCtx.state === 'suspended') await tempCtx.resume();
       }
     } catch (e) {
-      console.warn("Audio hardware busy");
+      console.warn("Hardware init blocked");
     }
 
     if (index !== undefined) {
@@ -35,7 +37,7 @@ export default function QuranReader({ userId }: { userId: string }) {
       if (isPlaying) {
         toggleAudio();
       } else {
-        const target = activeAyahIndex !== null ? activeAyahIndex : 0;
+        const target = (typeof activeAyahIndex === 'number') ? activeAyahIndex : 0;
         playAyah(target, ayahs, preferredReciter);
       }
     }
@@ -76,12 +78,13 @@ export default function QuranReader({ userId }: { userId: string }) {
       });
   }, [selectedSurah]);
 
- useEffect(() => {
-  // 🚀 Add 'typeof activeAyahIndex === "number"' to satisfy TypeScript
-  if (isPlaying && playlist[0]?.surah === selectedSurah && typeof activeAyahIndex === 'number') {
-    ayahRefs.current[activeAyahIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-}, [activeAyahIndex, isPlaying, selectedSurah, playlist]);
+  // 🚀 TypeScript Safety Check
+  useEffect(() => {
+    if (isPlaying && playlist[0]?.surah === selectedSurah && typeof activeAyahIndex === 'number') {
+      ayahRefs.current[activeAyahIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [activeAyahIndex, isPlaying, selectedSurah, playlist]);
+
   return (
     <Card className="bg-[#0a0a0a] border-white/5 overflow-hidden flex flex-col h-[75vh] md:h-[85vh]">
       <div className="p-4 md:p-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02] sticky top-0 z-20">

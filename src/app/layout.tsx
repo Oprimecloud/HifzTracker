@@ -4,6 +4,7 @@ import "./globals.css";
 import { AudioProvider } from '@/context/AudioContext';
 import MiniPlayer from '@/components/dashboard/MiniPlayer';
 import InstallBanner from '@/components/ui/InstallBanner';
+import { Toaster } from 'sonner';
 import InstallPrompt from "@/components/InstallPrompt"; // 🚀 The new component
 
 const inter = Inter({ subsets: ["latin"] });
@@ -46,6 +47,8 @@ export default function RootLayout({
           <InstallBanner /> 
           
           {children}
+
+          <Toaster position="top-center" richColors />
           
           {/* Global Audio Player */}
           <MiniPlayer /> 
