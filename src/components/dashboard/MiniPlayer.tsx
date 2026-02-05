@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 export default function MiniPlayer() {
   const { isPlaying, toggleAudio, playlist, activeAyahIndex } = useAudio();
-  const currentTrack = playlist[activeAyahIndex];
+  const currentTrack = (activeAyahIndex !== null) ? playlist[activeAyahIndex] : null;
 
   if (!currentTrack) return null;
 
