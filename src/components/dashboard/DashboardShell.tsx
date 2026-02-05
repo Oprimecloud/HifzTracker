@@ -3,18 +3,19 @@
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation"; 
-import { BookOpen, LayoutDashboard, Settings, LogOut, Menu, Trophy, Sparkles, Heart } from "lucide-react";
+import { BookOpen, LayoutDashboard, Settings, LogOut, Menu, Trophy, Sparkles, Heart, BookAlert, BookCheckIcon, HistoryIcon, Goal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from '@/lib/supabase';
 
 const menuItems = [
   { name: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
-  { name: 'Recite Quran', icon: BookOpen, href: '/dashboard/recite' }, 
-  { name: 'Hifz Logs', icon: BookOpen, href: '/dashboard/logs' },
+  { name: 'My Quran', icon: BookCheckIcon, href: '/dashboard/recite' }, 
+  {name:  'Adhkar', icon: BookAlert, href: '/dashboard/adhkar' },
+  { name: 'Hifz Logs', icon: HistoryIcon, href: '/dashboard/logs' },
   { name: 'Leaderboard', icon: Trophy, href: '/dashboard/leaderboard' },
   { name: 'Support Mission', icon: Heart, href: '/dashboard/donate' },
-  { name: 'Achievements', icon: Trophy, href: '/dashboard/awards' },
+  { name: 'Achievements', icon: Goal, href: '/dashboard/awards' },
   { name: 'Settings', icon: Settings, href: '/dashboard/settings' },
 
 ];
