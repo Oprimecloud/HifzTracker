@@ -34,11 +34,7 @@ export default function RecitePage() {
             <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">Focused Recitation</h1>
             <p className="text-slate-400 text-sm">Read carefully, log instantly, grow spiritually.</p>
           </div>
-          <QuranReader userId={userId!} />
-        </div>
-        <div className="space-y-6">
-          <AdhkarPlayer />
-          <div className="bg-[#0a0a0a] border border-white/5 p-6 rounded-2xl relative overflow-hidden group">
+            <div className="bg-[#0a0a0a] border border-white/5 p-6 rounded-2xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
               <BookOpen className="h-12 w-12 text-emerald-500" />
             </div>
@@ -47,6 +43,10 @@ export default function RecitePage() {
               "Recite the Surah once from the Mushaf, then once from memory."
             </p>
           </div>
+          <QuranReader userId={userId!} />
+        </div>
+        <div className="space-y-6">
+          <AdhkarPlayer />
         </div>
       </div>
     </DashboardShell>

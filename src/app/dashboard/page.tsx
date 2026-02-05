@@ -8,7 +8,8 @@ import LogProgressForm from "@/components/dashboard/LogProgressForm";
 import ActivityHeatmap from "@/components/dashboard/ActivityHeatmap";
 import IslamicCalendar from "@/components/dashboard/IslamicCalendar";
 import SmartRevision from "@/components/dashboard/SmartRevision";
-import { Loader2 } from "lucide-react";
+import { Loader2, Quote } from "lucide-react";
+import { Card } from '@/components/ui/card';
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null);
@@ -76,11 +77,42 @@ export default function DashboardPage() {
               </p>
             </div>
           )}
-          <p className="text-slate-500">
-            Track your journey. Your consistency today is your reward for eternity.
-          </p>
+       
         </header>
-        
+        <div className="space-y-6">
+            {/* D. Motivation/Hadith Card (Small Block) */}
+          <div className="col-span-1 md:col-span-5 lg:col-span-4 h-full">
+            <Card className="bg-emerald-600 border-none p-6 h-full min-h-[240px] flex flex-col justify-between relative overflow-hidden shadow-2xl shadow-emerald-900/20 rounded-[2rem]">
+               {/* Decorative Icon */}
+               <div className="absolute top-0 right-0 p-6 opacity-20">
+                 <Quote className="h-24 w-24 text-white transform rotate-12" />
+               </div>
+               
+               <div className="relative z-10 space-y-4">
+                 <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
+                    <h3 className="text-lg font-bold text-white">Did you know?</h3>
+                 </div>
+                 <p className="text-white text-base font-medium leading-relaxed">
+                   "The most beloved of deeds to Allah are those that are most consistent, even if they are small."
+                 </p>
+                 <p className="text-emerald-200 text-xs font-bold uppercase tracking-widest">(Bukhari)</p>
+                 
+                 <div className="h-px w-full bg-white/20 my-4" />
+                 
+                 <p className="text-xs font-bold text-emerald-100 uppercase tracking-widest flex items-center gap-2">
+                    Current Streak: <span className="text-white bg-white/20 px-2 py-0.5 rounded-md">{profile?.current_streak || 0} Days</span>
+                 </p>
+               </div>
+            </Card>
+          </div>
+               {/* 2. Main Action Area */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2">
+            {/* If guest, we pass 'guest' so the form knows to save to localStorage instead of Supabase */}
+            <LogProgressForm userId={userId} />
+          </div>
+        </div>
          <SmartRevision userId={userId} />
 
         {/* 1. Stat Cards Section */}
@@ -90,34 +122,9 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 space-y-6">
             <IslamicCalendar />
           </div>
-          <div className="space-y-6">
-            {/* 3. Quick Tips/Hadith Card */}
-            <div className="bg-emerald-600 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-between h-full">
-              <div>
-                <h3 className="text-xl font-bold mb-4">Did you know?</h3>
-                <p className="text-emerald-50 text-sm italic leading-relaxed">
-                  "The most beloved of deeds to Allah are those that are most consistent, even if they are small." 
-                  (Bukhari)
-                </p>
-              </div>
-              <div className="mt-8 pt-6 border-t border-white/30">
-                <p className="text-xs text-emerald-100">
-                  You are currently on a <span className="font-bold">{profile?.current_streak || 0} day</span> streak. 
-                </p>
-              </div>
-            </div>
+          
           </div>
         </div>
-       
-
-        {/* 2. Main Action Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            {/* If guest, we pass 'guest' so the form knows to save to localStorage instead of Supabase */}
-            <LogProgressForm userId={userId} />
-          </div>
-        </div>
-
         <div className="space-y-8">
           <ActivityHeatmap userId={userId} />
           {/* 🚀 The New Smart Revision Card */}

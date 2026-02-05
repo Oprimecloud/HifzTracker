@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { BookOpen, CheckCircle2 } from "lucide-react";
+import { BookOpen, CheckCircle2, ChevronRight } from "lucide-react";
 
 export default function LogProgressForm({ userId }: { userId: string | null }) {
   const router = useRouter();
@@ -73,57 +73,76 @@ export default function LogProgressForm({ userId }: { userId: string | null }) {
   };
 
   return (
-    <Card className="border-emerald-200 shadow-lg bg-white">
-      <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100 border-b border-emerald-200">
-        <CardTitle className="text-emerald-700 flex items-center gap-2 text-xl font-bold">
-          <BookOpen className="h-6 w-6" /> Log Daily Progress
+    <Card className="border-white/5 bg-[#0a0a0a] shadow-2xl relative overflow-hidden group">
+      {/* Background Decor */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -mr-10 -mt-10" />
+      
+      <CardHeader className="pb-2 relative z-10">
+        <CardTitle className="text-white flex items-center gap-3 text-lg font-bold">
+          <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500">
+             <BookOpen className="h-5 w-5" />
+          </div>
+          <span className="tracking-tight">Log Daily Progress</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-8 px-4 sm:px-6">
+
+      <CardContent className="pt-4 relative z-10">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-            <div className="space-y-2">
-              <Label className="text-emerald-900 font-semibold text-sm">Surah Number</Label>
+          <div className="grid grid-cols-3 gap-3">
+            {/* Surah Input */}
+            <div className="col-span-3 sm:col-span-1 space-y-2">
+              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Surah No.</Label>
               <Input 
                 type="number" 
-                placeholder="e.g. 18" 
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="1-114" 
                 value={surah} 
                 onChange={(e) => setSurah(e.target.value)} 
                 required 
-                className="border-2 border-emerald-200 bg-white text-emerald-900 placeholder-emerald-400 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
+                className="h-12 border-white/10 bg-white/5 text-white placeholder:text-slate-600 focus-visible:ring-emerald-500 rounded-xl font-medium"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-emerald-900 font-semibold text-sm">Start Ayah</Label>
+
+            {/* Start Ayah */}
+            <div className="col-span-3 sm:col-span-1 space-y-2">
+              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Ayah</Label>
               <Input 
                 type="number" 
-                placeholder="1" 
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="From" 
                 value={startAyah} 
                 onChange={(e) => setStartAyah(e.target.value)} 
                 required 
-                className="border-2 border-emerald-200 bg-white text-emerald-900 placeholder-emerald-400 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
+                className="h-12 border-white/10 bg-white/5 text-white placeholder:text-slate-600 focus-visible:ring-emerald-500 rounded-xl font-medium"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-emerald-900 font-semibold text-sm">End Ayah</Label>
+
+            {/* End Ayah */}
+            <div className="col-span-3 sm:col-span-1 space-y-2">
+              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">End Ayah</Label>
               <Input 
                 type="number" 
-                placeholder="10" 
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="To" 
                 value={endAyah} 
                 onChange={(e) => setEndAyah(e.target.value)} 
                 required 
-                className="border-2 border-emerald-200 bg-white text-emerald-900 placeholder-emerald-400 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
+                className="h-12 border-white/10 bg-white/5 text-white placeholder:text-slate-600 focus-visible:ring-emerald-500 rounded-xl font-medium"
               />
             </div>
           </div>
+
           <Button 
             type="submit" 
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-semibold py-6 text-base transition-colors duration-200"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-12 rounded-xl text-sm transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2"
             disabled={loading}
           >
             {loading ? 'Logging Deeds...' : (
               <>
-                <CheckCircle2 className="h-5 w-5" /> Save Reading
+                <CheckCircle2 className="h-5 w-5" /> Save Reading Session
               </>
             )}
           </Button>

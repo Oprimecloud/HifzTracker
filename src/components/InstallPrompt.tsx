@@ -44,14 +44,14 @@ export default function InstallPrompt() {
 
         <div className="flex gap-4 items-start">
           <div className="h-12 w-12 bg-emerald-500 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
-             <img src="/icon-192x192.png" alt="App Icon" className="h-8 w-8 object-contain" /> 
+             <img src="/icons/icon-192.png" alt="App Icon" className="h-8 w-8 object-contain" /> 
              {/* Make sure you have an icon, otherwise use text */}
           </div>
           
           <div className="space-y-1">
             <h3 className="font-bold text-white text-lg">Install HifzTracker</h3>
             <p className="text-slate-400 text-sm">
-              Add to Home Screen for the full full-screen experience and offline access.
+              Add to Home Screen for better screen experience and a focused reading.
             </p>
           </div>
         </div>
